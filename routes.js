@@ -8,6 +8,9 @@ const jwt = require("jsonwebtoken");
 
 const User = require("./model/user");
 
+const SECRET_KEY = "sk_test_51MSFMaSIDUaT83RH4vnhsd912OjOTu0H24F7JeBJocmKGdFZSonVLag0uxO25rPnAnICc1jNkNP2Eb9Io2U4bSHz00hQv8daDj";
+const stripe = require("stripe")(SECRET_KEY);
+
 // Get all posts
 router.get("/blog", auth, async (req, res) => {
 	const posts = await Post.find()
@@ -220,5 +223,36 @@ router.get("/me", auth, async (req, res) => {
     res.send({ message: "Error in Fetching user" });
   }
 });
+
+
+// router.post("/api/payment", async (req, res) => {
+//   stripe.customers.create({
+//     email: req.body.stripeEmail,
+//     source: req.body.stripeToken,
+//     name: 'abc Sharma',
+//     address: {
+//     line1: 'TC 9/4 Old MES colony',
+//     postal_code: '110092',
+//     city: 'New Delhi',
+//     state: 'Delhi',
+//     country: 'India',
+//     }
+//     })
+//     .then((customer) => {
+     
+//     return stripe.charges.create({
+//     amount: 7000, // Charing Rs 25
+//     description: 'Web Development Product',
+//     currency: 'USD',
+//     customer: customer.id
+//     });
+//     })
+//     .then((charge) => {
+//       res.send("Success") // If no error occurs
+//     })
+//     .catch((err) => {
+//       res.send(err) // If some error occurs
+//     });
+// });
 
 module.exports = router
