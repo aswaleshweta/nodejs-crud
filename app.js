@@ -7,7 +7,10 @@ const path = require("path");
 const PUBLISH_KEY = "pk_test_51MSFMaSIDUaT83RH8YJIlAhIFDSaY3YHR0ZF97d4aBQPZqQPT4zpzncpccSgdGfD3eqH968vRuQxTsFFEsXUGQcZ00jOpFwYpv";
 const SECRET_KEY = "sk_test_51MSFMaSIDUaT83RH4vnhsd912OjOTu0H24F7JeBJocmKGdFZSonVLag0uxO25rPnAnICc1jNkNP2Eb9Io2U4bSHz00hQv8daDj";
 const stripe = require("stripe")(SECRET_KEY);
+const logger = require('./logger')
+// const httpLogger = require('./httpLogger')
 
+// app.use(httpLogger)
 // Connect to MongoDB database
 mongoose
 	.connect("mongodb+srv://shwetaaswale:shwetaaswale@cluster0.rkqcsuv.mongodb.net/?retryWrites=true&w=majority", { 
@@ -31,9 +34,21 @@ mongoose
     });
   
 		app.listen(3000, () => {
+      logger.info('Express.js listening on port 3000.');
 			console.log("Server has started!");
 		})
 
+
+    app.use(logErrors)
+app.use(errorHandler)
+
+function logErrors (err, req, res, next) {
+  console.error(err.stack)
+  next(err)
+}
+function errorHandler (err, req, res, next) {
+  res.status(500).send('Error!')
+}
 
     app.post('/payment', function(req, res) {
       stripe.customers.create({

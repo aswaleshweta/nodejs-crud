@@ -10,6 +10,8 @@ const User = require("./model/user");
 
 const SECRET_KEY = "sk_test_51MSFMaSIDUaT83RH4vnhsd912OjOTu0H24F7JeBJocmKGdFZSonVLag0uxO25rPnAnICc1jNkNP2Eb9Io2U4bSHz00hQv8daDj";
 const stripe = require("stripe")(SECRET_KEY);
+const logger = require('./logger')
+
 
 // Get all posts
 router.get("/blog", auth, async (req, res) => {
@@ -18,6 +20,7 @@ router.get("/blog", auth, async (req, res) => {
     status: 200 , data: posts,
     success: true
   })
+  logger.debug('This is the "/" route.')
 })
 
 
@@ -34,6 +37,7 @@ router.post("/blog", async (req, res) => {
     })
 	} catch {
 		res.status(400)
+    logger.error('erro while saving new data: ', error)
     res.send({ status: 400 ,message: "Erro While Saving Record",
       success: false })
 	}
@@ -219,6 +223,7 @@ router.get("/me", auth, async (req, res) => {
     // request.user is getting fetched from Middleware after token authentication
     const user = await User.findById(req.user.id);
     res.json(user);
+    logger.info('correct token');
   } catch (e) {
     res.send({ message: "Error in Fetching user" });
   }
