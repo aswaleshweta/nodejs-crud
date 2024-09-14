@@ -12,8 +12,7 @@ const logger = require('./logger')
 
 // app.use(httpLogger)
 // Connect to MongoDB database
-mongoose
-	.connect("mongodb+srv://shwetaaswale:shwetaaswale@cluster0.rkqcsuv.mongodb.net/?retryWrites=true&w=majority", { 
+mongoose.connect("mongodb://localhost:27017/emp_mgt", { 
     useNewUrlParser: true,
     useUnifiedTopology: true
   })
