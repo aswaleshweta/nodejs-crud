@@ -20,17 +20,23 @@ router.get("/blog", async (req, res) => {
     // Extract query parameters
     const { search, title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
 
-    // Initialize filter and sorting options
-    let filter = {}; 
-    let sortOptions = {};
-
     // MongoDB filtering based on specific fields
+    let filter = {}; 
     if (title) filter.title = { $regex: title, $options: "i" };
     if (content) filter.content = { $regex: content, $options: "i" };
     if (address) filter.address = { $regex: address, $options: "i" };
     if (first_name) filter.first_name = { $regex: first_name, $options: "i" };
 
-    // OpenSearch query construction for global search
+    // Set default pagination values
+    const pageNumber = parseInt(page) || 1;
+    const pageSize = parseInt(limit) || 10;
+    const skip = (pageNumber - 1) * pageSize;
+
+    // Set sorting options (default: sort by creation date in descending order)
+    const sortField = sortBy || 'createdAt';
+    const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    // Construct OpenSearch query
     let openSearchQuery = {
       index: 'blogs',
       body: {
@@ -38,7 +44,8 @@ router.get("/blog", async (req, res) => {
           bool: {
             should: []
           }
-        }
+        },
+        sort: [{ [sortField]: { order: sortDirection } }]
       }
     };
 
@@ -51,18 +58,6 @@ router.get("/blog", async (req, res) => {
       ];
     }
 
-    // Set default pagination values
-    const pageNumber = parseInt(page) || 1;
-    const pageSize = parseInt(limit) || 10;
-    const skip = (pageNumber - 1) * pageSize;
-
-    // Set sorting options (default: sort by creation date in descending order)
-    const sortField = sortBy || 'createdAt';
-    const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
-
-    // Add sorting to OpenSearch query
-    openSearchQuery.body.sort = [{ [sortField]: { order: sortDirection } }];
-
     // Perform the search on OpenSearch
     const openSearchResponse = await openSearchClient.search({
       ...openSearchQuery,
@@ -70,6 +65,7 @@ router.get("/blog", async (req, res) => {
       size: pageSize,
     });
 
+    // Extract data from OpenSearch response
     const totalDocuments = openSearchResponse.body.hits.total.value;
     const posts = openSearchResponse.body.hits.hits.map(hit => hit._source);
 
@@ -84,6 +80,7 @@ router.get("/blog", async (req, res) => {
     });
 
     console.log('Fetched posts with OpenSearch and filters.');
+    console.log('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
   } catch (error) {
     res.status(500).send({
       status: 500,
@@ -91,9 +88,10 @@ router.get("/blog", async (req, res) => {
       success: false,
     });
     console.error('Error fetching posts: ', error);
+    console.error('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
+
   }
 });
-
 
 
 // router.get("/blog", async (req, res) => {

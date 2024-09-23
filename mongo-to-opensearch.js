@@ -56,29 +56,31 @@ const bulkResponse = await openSearchClient.bulk({ body: bulkOps });
 }
 
 // Main function to fetch data from MongoDB and index into OpenSearch
+// Main function to fetch data from MongoDB and index into OpenSearch
 async function reindexMongoToOpenSearch() {
-  const client = new MongoClient(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-
-  try {
-    // Connect to MongoDB
-    await client.connect();
-    const db = client.db(DATABASE_NAME);
-    const collection = db.collection(COLLECTION_NAME);
-
-    // Fetch all documents from the MongoDB collection
-    const documents = await collection.find({}).toArray();
-
-    console.log(`Fetched ${documents.length} documents from MongoDB`);
-
-    // Index documents into OpenSearch
-    await indexDataToOpenSearch(documents);
-  } catch (err) {
-    console.error('Error while reindexing:', err);
-  } finally {
-    // Close the MongoDB connection
-    await client.close();
+    const client = new MongoClient(MONGO_URI); // No need for deprecated options
+  
+    try {
+      // Connect to MongoDB
+      await client.connect();
+      const db = client.db(DATABASE_NAME);
+      const collection = db.collection(COLLECTION_NAME);
+  
+      // Fetch all documents from the MongoDB collection
+      const documents = await collection.find({}).toArray();
+  
+      console.log(`Fetched ${documents.length} documents from MongoDB`);
+  
+      // Index documents into OpenSearch
+      await indexDataToOpenSearch(documents);
+    } catch (err) {
+      console.error('Error while reindexing:', err);
+    } finally {
+      // Close the MongoDB connection
+      await client.close();
+    }
   }
-}
+  
 
 // Start the reindexing process
 reindexMongoToOpenSearch();
