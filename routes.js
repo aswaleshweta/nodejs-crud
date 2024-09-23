@@ -33,7 +33,7 @@ router.get("/blog", async (req, res) => {
     const skip = (pageNumber - 1) * pageSize;
 
     // Set sorting options (default: sort by creation date in descending order)
-    const sortField = sortBy || 'createdAt';
+    const sortField = sortBy || 'title.keyword';
     const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
 
     // Construct OpenSearch query
@@ -82,13 +82,13 @@ router.get("/blog", async (req, res) => {
     console.log('Fetched posts with OpenSearch and filters.');
     console.log('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
   } catch (error) {
+    console.error('Error fetching posts: ', error);  // Log the detailed error
     res.status(500).send({
       status: 500,
       message: "Error fetching posts",
       success: false,
+      error: error.message,  // Add error message in the response
     });
-    console.error('Error fetching posts: ', error);
-    console.error('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
 
   }
 });
