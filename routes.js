@@ -18,7 +18,7 @@ const openSearchClient = new Client({ node: 'http://localhost:9200' });
 router.get("/blog", async (req, res) => {
   try {
     // Extract query parameters
-    const { search, title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
+    const { title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
 
     // MongoDB filtering based on specific fields
     let filter = {}; 
@@ -33,54 +33,27 @@ router.get("/blog", async (req, res) => {
     const skip = (pageNumber - 1) * pageSize;
 
     // Set sorting options (default: sort by creation date in descending order)
-    const sortField = sortBy || 'title.keyword';
-    const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
+    const sortField = sortBy || 'createdAt';  // Adjust field name as needed
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
 
-    // Construct OpenSearch query
-    let openSearchQuery = {
-      index: 'blogs',
-      body: {
-        query: {
-          bool: {
-            should: []
-          }
-        },
-        sort: [{ [sortField]: { order: sortDirection } }]
-      }
-    };
+    // Query MongoDB with filters, sorting, and pagination
+    const posts = await Post.find(filter)
+      .sort({ [sortField]: sortDirection })
+      .skip(skip)
+      .limit(pageSize);
 
-    if (search) {
-      openSearchQuery.body.query.bool.should = [
-        { match: { title: search } },
-        { match: { content: search } },
-        { match: { address: search } },
-        { match: { first_name: search } }
-      ];
-    }
+    // Get total document count for pagination
+    const totalDocuments = await Post.countDocuments(filter);
 
-    // Perform the search on OpenSearch
-    const openSearchResponse = await openSearchClient.search({
-      ...openSearchQuery,
-      from: skip,
-      size: pageSize,
-    });
-
-    // Extract data from OpenSearch response
-    const totalDocuments = openSearchResponse.body.hits.total.value;
-    const posts = openSearchResponse.body.hits.hits.map(hit => hit._source);
-
-    // Send response with OpenSearch data
+    // Send response with MongoDB data
     res.send({
       status: 200,
       data: posts,
-      total: totalDocuments, // Total matching posts
+      total: totalDocuments,  // Total matching posts
       page: pageNumber,
       limit: pageSize,
       success: true,
     });
-
-    console.log('Fetched posts with OpenSearch and filters.');
-    console.log('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
   } catch (error) {
     console.error('Error fetching posts: ', error);  // Log the detailed error
     res.status(500).send({
@@ -89,9 +62,108 @@ router.get("/blog", async (req, res) => {
       success: false,
       error: error.message,  // Add error message in the response
     });
-
   }
 });
+
+
+// router.get("/blog", async (req, res) => {
+//   try {
+//     // Extract query parameters
+//     const { search, title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
+
+//     // MongoDB filtering based on specific fields (for later fallback or combined querying if needed)
+//     let filter = {}; 
+//     if (title) filter.title = { $regex: title, $options: "i" };
+//     if (content) filter.content = { $regex: content, $options: "i" };
+//     if (address) filter.address = { $regex: address, $options: "i" };
+//     if (first_name) filter.first_name = { $regex: first_name, $options: "i" };
+
+//     // Set default pagination values
+//     const pageNumber = parseInt(page) || 1;
+//     const pageSize = parseInt(limit) || 10;
+//     const skip = (pageNumber - 1) * pageSize;
+
+//     // Set sorting options (default: sort by creation date in descending order)
+//     const sortField = sortBy || 'title.keyword'; // Assuming OpenSearch has keyword type for title
+//     const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
+
+//     // Construct OpenSearch query
+//  // Construct OpenSearch query
+// let openSearchQuery = {
+//   index: 'blogs',
+//   body: {
+//     query: {
+//       bool: {            // Initialize the bool clause
+//         must: []        // Initialize must as an empty array
+//       }
+//     },
+//     sort: [{ [sortField]: { order: sortDirection } }]
+//   }
+// };
+
+// // If a search is provided, add it to the must clause
+// if (search) {
+//   openSearchQuery.body.query.bool.must.push({ match: { title: search } });
+//   openSearchQuery.body.query.bool.must.push({ match: { content: search } });
+//   openSearchQuery.body.query.bool.must.push({ match: { address: search } });
+//   openSearchQuery.body.query.bool.must.push({ match: { first_name: search } });
+// }
+
+// // If specific fields are provided, add to must clause
+// if (title) {
+//   openSearchQuery.body.query.bool.must.push({ match: { title: title } });
+// }
+// if (content) {
+//   openSearchQuery.body.query.bool.must.push({ match: { content: content } });
+// }
+// if (address) {
+//   openSearchQuery.body.query.bool.must.push({ match: { address: address } });
+// }
+// if (first_name) {
+//   openSearchQuery.body.query.bool.must.push({ match: { first_name: first_name } });
+// }
+
+// // If no search terms or filters are provided, use match_all to fetch all documents
+// if (openSearchQuery.body.query.bool.must.length === 0) {
+//   openSearchQuery.body.query = { match_all: {} };
+// }
+
+
+//     // Perform the search on OpenSearch
+//     const openSearchResponse = await openSearchClient.search({
+//       ...openSearchQuery,
+//       from: skip,
+//       size: pageSize,
+//     });
+    
+//     console.log('OpenSearch Response $:', JSON.stringify(openSearchResponse.body, null, 2));
+
+//     // Extract data from OpenSearch response
+//     const totalDocuments = openSearchResponse.body.hits.total.value;
+//     const posts = openSearchResponse.body.hits.hits.map(hit => hit._source);
+
+//     // Send response with OpenSearch data
+//     res.send({
+//       status: 200,
+//       data: posts,
+//       total: totalDocuments,  // Total matching posts
+//       page: pageNumber,
+//       limit: pageSize,
+//       success: true,
+//     });
+//     console.log('Fetched posts with OpenSearch and filters.');
+//     console.log('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
+//     console.log('***PSOT', posts)
+//   } catch (error) {
+//     console.error('Error fetching posts: ', error);  // Log the detailed error
+//     res.status(500).send({
+//       status: 500,
+//       message: "Error fetching posts",
+//       success: false,
+//       error: error.message,  // Add error message in the response
+//     });
+//   }
+// });
 
 router.post("/blog", async (req, res) => {
   try {
