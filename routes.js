@@ -18,10 +18,22 @@ const openSearchClient = new Client({ node: 'http://localhost:9200' });
 router.get("/blog", async (req, res) => {
   try {
     // Extract query parameters
-    const { title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
+    const { title, content, address, first_name, search, sortBy, sortOrder, page, limit } = req.query;
 
     // MongoDB filtering based on specific fields
-    let filter = {}; 
+    let filter = {};
+
+    // Support search across multiple fields (title, content, address, first_name)
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } },
+        { address: { $regex: search, $options: "i" } },
+        { first_name: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Apply individual field filters if provided
     if (title) filter.title = { $regex: title, $options: "i" };
     if (content) filter.content = { $regex: content, $options: "i" };
     if (address) filter.address = { $regex: address, $options: "i" };
@@ -65,13 +77,12 @@ router.get("/blog", async (req, res) => {
   }
 });
 
-
 // router.get("/blog", async (req, res) => {
 //   try {
 //     // Extract query parameters
-//     const { search, title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
+//     const { title, content, address, first_name, sortBy, sortOrder, page, limit } = req.query;
 
-//     // MongoDB filtering based on specific fields (for later fallback or combined querying if needed)
+//     // MongoDB filtering based on specific fields
 //     let filter = {}; 
 //     if (title) filter.title = { $regex: title, $options: "i" };
 //     if (content) filter.content = { $regex: content, $options: "i" };
@@ -84,65 +95,19 @@ router.get("/blog", async (req, res) => {
 //     const skip = (pageNumber - 1) * pageSize;
 
 //     // Set sorting options (default: sort by creation date in descending order)
-//     const sortField = sortBy || 'title.keyword'; // Assuming OpenSearch has keyword type for title
-//     const sortDirection = sortOrder === 'asc' ? 'asc' : 'desc';
+//     const sortField = sortBy || 'createdAt';  // Adjust field name as needed
+//     const sortDirection = sortOrder === 'asc' ? 1 : -1;
 
-//     // Construct OpenSearch query
-//  // Construct OpenSearch query
-// let openSearchQuery = {
-//   index: 'blogs',
-//   body: {
-//     query: {
-//       bool: {            // Initialize the bool clause
-//         must: []        // Initialize must as an empty array
-//       }
-//     },
-//     sort: [{ [sortField]: { order: sortDirection } }]
-//   }
-// };
+//     // Query MongoDB with filters, sorting, and pagination
+//     const posts = await Post.find(filter)
+//       .sort({ [sortField]: sortDirection })
+//       .skip(skip)
+//       .limit(pageSize);
 
-// // If a search is provided, add it to the must clause
-// if (search) {
-//   openSearchQuery.body.query.bool.must.push({ match: { title: search } });
-//   openSearchQuery.body.query.bool.must.push({ match: { content: search } });
-//   openSearchQuery.body.query.bool.must.push({ match: { address: search } });
-//   openSearchQuery.body.query.bool.must.push({ match: { first_name: search } });
-// }
+//     // Get total document count for pagination
+//     const totalDocuments = await Post.countDocuments(filter);
 
-// // If specific fields are provided, add to must clause
-// if (title) {
-//   openSearchQuery.body.query.bool.must.push({ match: { title: title } });
-// }
-// if (content) {
-//   openSearchQuery.body.query.bool.must.push({ match: { content: content } });
-// }
-// if (address) {
-//   openSearchQuery.body.query.bool.must.push({ match: { address: address } });
-// }
-// if (first_name) {
-//   openSearchQuery.body.query.bool.must.push({ match: { first_name: first_name } });
-// }
-
-// // If no search terms or filters are provided, use match_all to fetch all documents
-// if (openSearchQuery.body.query.bool.must.length === 0) {
-//   openSearchQuery.body.query = { match_all: {} };
-// }
-
-
-//     // Perform the search on OpenSearch
-//     const openSearchResponse = await openSearchClient.search({
-//       ...openSearchQuery,
-//       from: skip,
-//       size: pageSize,
-//     });
-    
-//     console.log('OpenSearch Response $:', JSON.stringify(openSearchResponse.body, null, 2));
-
-//     // Extract data from OpenSearch response
-//     const totalDocuments = openSearchResponse.body.hits.total.value;
-//     const posts = openSearchResponse.body.hits.hits.map(hit => hit._source);
-
-//     // Send response with OpenSearch data
+//     // Send response with MongoDB data
 //     res.send({
 //       status: 200,
 //       data: posts,
@@ -151,9 +116,6 @@ router.get("/blog", async (req, res) => {
 //       limit: pageSize,
 //       success: true,
 //     });
-//     console.log('Fetched posts with OpenSearch and filters.');
-//     console.log('OpenSearch query:', JSON.stringify(openSearchQuery, null, 2));
-//     console.log('***PSOT', posts)
 //   } catch (error) {
 //     console.error('Error fetching posts: ', error);  // Log the detailed error
 //     res.status(500).send({
@@ -164,6 +126,7 @@ router.get("/blog", async (req, res) => {
 //     });
 //   }
 // });
+
 
 router.post("/blog", async (req, res) => {
   try {
